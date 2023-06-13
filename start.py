@@ -8,6 +8,7 @@ from base64 import b64encode
 import json
 import torch
 import numpy as np
+import glob
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -61,10 +62,24 @@ def eval_image(tiles, template, model):
 
 
 
+class SplashApi:
+    def __init__(self):
+        self.templates = {}
+    def getTemplates(self):
+        templates = glob.glob('templates/*.npy')
+        for x in templates:
+            self.templates[os.path.basename(x)] = x
+        return json.dumps(list(self.templates.keys()))
+
+    def openImageViewer(self, template):
+        api = Api("models/shm.ckpt", self.templates[template])
+        webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/docpage.html', js_api=api,
+                              min_size=(600, 500))
 
 
 class Api:
     def __init__(self, chk_path, template_path):
+        self.done = False
         self.chk_path = chk_path
         self.template_path = template_path
         checkpoint = torch.load(chk_path, map_location=torch.device('cpu'))
@@ -127,10 +142,43 @@ class Api:
     def test(self):
         print("test")
 
+class Manager:
+    def __init__(self):
+        self.done = False
+
 
 if __name__ == '__main__':
 
-    api = Api("models/shm.ckpt",'/home/sgrieggs/PycharmProjects/ScribalHandsTool/templates/Hoccleve.npy')
+    # for x in tqdm_gui(range(1,1000000)):
+    #     print('hello world')
+    # manager = Manager()
+    # # while not manager.done:
+    # one = range(0,10)
+    # two = range(0,10)
+    # pbar = tqdm_gui(total=100)
+    # for i in one:
+    #     for j in two:
+    #         time.sleep(0.05)
+    #
 
-    webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/new_index.html', js_api=api, min_size=(600, 500))
+
+    # splash
+
+    # for outer in tqdm.tqdm([10, 20, 30, 40, 50], desc=" outer", position=0):
+    #     for inner in tqdm.tqdm(range(outer), desc=" inner loop", position=1, leave=False):
+    #         time.sleep(0.05)
+    # print("done!")
+
+    # api = Api("models/shm.ckpt", '/home/sgrieggs/PycharmProjects/ScribalHandsTool/templates/Hoccleve.npy')
+    # webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/docpage.html', js_api=api,
+    #                       min_size=(600, 500))
+    api = SplashApi()
+    webview.create_window('test', 'assets/index.html', js_api=api, min_size=(600, 500))
     webview.start(gui='qt')
+        #
+        # print("test")
+
+
+    # webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/new_index.html', js_api=api, min_size=(600, 500))
+    #
+    # webview.start(gui='qt')

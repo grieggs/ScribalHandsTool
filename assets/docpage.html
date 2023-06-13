@@ -2,7 +2,7 @@
 <html lang="en" data-framework="javascript">
     <head>
         <meta charset="utf-8">
-		<link rel="stylesheet" href="new_styles.css">
+		<link rel="stylesheet" href="doc_styles.css">
     </head>
     <body>
     <div id="fabric-canvas-wrapper" class="content">
@@ -28,12 +28,14 @@
         <button onclick = "loadImage()" type="button">Load Image</button>
         <button onclick = "evalImage()" type="button">Evaluate Image</button>
         <button onclick = "toggleColors()" type="button">Toggle Colors</button>
-        <button onclick = "loadTemplate()" type="button">Load Template</button>
+        <button onclick = "loadTemplate()" type="button">Change Template</button>
+        Zoom
+        <input type="range" min="1" max="1000" value="100" class="slider" id="zoomBar" onchange="zoomBar()">
 
     </div>
 
 	</body>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-        <script src="new_script.js"></script>
+        <script src="doc_script.js"></script>
 
 </html>

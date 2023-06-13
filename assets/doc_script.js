@@ -2,34 +2,41 @@ let canvas = this.__canvas = new fabric.Canvas('c');
 // let canvas2 = this.__canvas = new fabric.Canvas('c2');
 let image_group = new fabric.Group([]);
 let color_group = new fabric.Group([]);
-let img_array = []
-let color_array = []
-let img_opacity = .5
+let img_array = [];
+let color_array = [];
+let img_opacity = 1;
+let raw_width = -1;
+let raw_height = -1;
+let frozen = false;
+let zoom = 1
 
+// window.addEventListener('load', function() {
+//     resizeCanvas()
+// })
 
-window.addEventListener('load', function() {
-    resizeCanvas()
-})
+// function resizeCanvas(){
+//     const outerCanvasContainer = document.getElementById('fabric-canvas-wrapper');
+//     const ratio          = canvas.getWidth() / canvas.getHeight();
+//     const containerWidth = outerCanvasContainer.clientWidth;
+//     const scale          = containerWidth / canvas.getWidth();
+//     const zoom           = 1
+//     canvas.setDimensions({width: containerWidth, height: containerWidth / ratio});
+//     canvas.setViewportTransform([zoom, 0, 0, zoom, 0, 0]);
+// }
+// window.addEventListener('resize', resizeCanvas, true);
 
-function resizeCanvas(){
-    const outerCanvasContainer = document.getElementById('fabric-canvas-wrapper');
-
-    const ratio          = canvas.getWidth() / canvas.getHeight();
-    const containerWidth = outerCanvasContainer.clientWidth;
-    const scale          = containerWidth / canvas.getWidth();
-    const zoom           = 1
-
-    canvas.setDimensions({width: containerWidth, height: containerWidth / ratio});
-    canvas.setViewportTransform([zoom, 0, 0, zoom, 0, 0]);
+function move_all_to_back(group){
+    var objs = group.getObjects();
+    for (let j = 0, len =  color_group.size(); j < len; j++) {
+        canvas.sendToBack(objs[j]);
+    }
 }
-window.addEventListener('resize', resizeCanvas, true);
-
-
 
 // document.getElementById('c').fabric = canvas;
 fabric.Object.prototype.transparentCorners = false;
 canvas.on('mouse:over', function(e) {
-  if(e.target) {
+  if(e.target && !Frozen) {
+      console.error(image_group.length)
       var focus_img = document.getElementById('focus');
       e.target.set('opacity',1)
       focus_img.src = e.target.toDataURL();
@@ -41,17 +48,16 @@ canvas.on('mouse:over', function(e) {
       e.target.set('left', e.target.get('left')-1.5);
       e.target.set('top', e.target.get('top')-1.5);
       canvas.bringToFront(e.target);
+      move_all_to_back(color_group)
       canvas.renderAll();
   }
 });
 canvas.on('mouse:out', function(e) {
-  if(e.target){
+  if(e.target && !Frozen){
     e.target.set('stroke', 'none');
     e.target.set('strokeWidth',0);
     e.target.set('left', e.target.get('left')+1.5);
     e.target.set('top', e.target.get('top')+1.5);
-    // canvas2.clear();
-    // canvas.sendBackwards(e.target);
     canvas.renderAll();
   }
 });
@@ -59,11 +65,19 @@ canvas.on('mouse:out', function(e) {
 
 function loadImage() {
     // var canvas = document.getElementById("c").fabric;
+    Frozen = true;
     myPromise = window.pywebview.api.loadImage()
     myPromise.then(
         function(value) {
-            image_group = new fabric.Group([]);
             value = JSON.parse(value);
+            var zoomb = document.getElementById('zoomBar');
+            zoomb.value = 100;
+            raw_width =  value[0].length *64;
+            raw_height = value.length * 64
+            canvas.setWidth(raw_width);
+            canvas.setHeight(raw_height);
+            canvas.calcOffset();
+            image_group = new fabric.Group([]);
             img_array = [];
             for (let i = 0, len = value.length; i < len; i++) {
                 img_array.push([]);
@@ -79,14 +93,16 @@ function loadImage() {
                     });
                 }
             }
-
+        Frozen = false;
         },
-        function(error) { /* code if some error */ }
+        function(error) { Frozen = false;}
         );
 
 };
 
 function evalImage(){
+    img_opacity = .5
+    Frozen = true;
     myPromise = window.pywebview.api.evalImage()
     myPromise.then(
         function(value) {
@@ -122,13 +138,15 @@ function evalImage(){
                           height: 64
                         });
                     }
+                    rect.selectable = false;
                     canvas.sendToBack(rect)
                     color_array[i].push(rect)
                     color_group.add(rect)
                 }
             }
+            Frozen = false;
         },
-        function(error) { /* code if some error */ }
+        function(error) {Frozen = false;}
         );
 };
 
@@ -148,9 +166,20 @@ function toggleColors(){
             }
         }
     }
+    canvas.renderAll();
 }
 
+function zoomBar(){
+    var zoomb = document.getElementById('zoomBar')
+    if(raw_width != -1 && raw_height != -1){
+        zoom = zoomb.value/100.0
+        canvas.setZoom(zoom);
+        canvas.setWidth(raw_width * canvas.getZoom());
+        canvas.setHeight(raw_height * canvas.getZoom());
+    }
 
+
+}
 
 function loadTemplate() {
 

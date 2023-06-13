@@ -1,30 +1,36 @@
 <!doctype html>
 <html lang="en" data-framework="javascript">
     <head>
-
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-            }
-            .imgbox {
-                display: grid;
-                height: 100%;
-            }
-            .center-fit {
-                max-width: 70%;
-                max-height: 100vh;
-                margin: auto;
-            }
-        </style>
+        <meta charset="utf-8">
+		<link rel="stylesheet" href="new_styles.css">
     </head>
     <body>
+    <div id="fabric-canvas-wrapper" class="content">
+        <canvas id="c"></canvas>
+    </div>
+    <div class="right">
+        <table>
+            <tr>
+                <img id="focus" src="blank.png">
+            </tr>
+            <tr>
+                <td>Score:</td>
+                <td><div  id="score"></div></td>
+            </tr>
+            <tr>
+                <td>Template:</td>
+                <td><div id="template"</td>
+            </tr>
+        </table>
+    </div>
 
-        <section id="image">
-		</section>
-        <div id="result2"></div>
-     <button onclick = "fun()" type="button">Click Me!</button>
+    <div class="buttons">
+        <button onclick = "loadImage()" type="button">Load Image</button>
+        <button onclick = "loadTemplate()"></button>
+    </div>
+
 	</body>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
         <script src="new_script.js"></script>
 
 </html>

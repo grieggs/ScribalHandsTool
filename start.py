@@ -2,10 +2,10 @@ import os
 
 import webview
 from PIL import Image
-# from matplotlib import pylab
+
 from io import BytesIO
 from base64 import b64encode
-
+import json
 
 import numpy as np
 
@@ -19,17 +19,17 @@ def get_tiles(iw):
             if x + 64 < length and y + 64 < width:
                 tiles[-1].append(np.copy(image[x:x + 64, y:y + 64, :]))
             elif x + 64 < length:
-                temp = np.ones((64, 64, 3))
-                tar = np.copy(image[x:x + 64, y:y, :])
+                temp = np.ones((64, 64, 3))*255
+                tar = np.copy(image[x:x + 64, y:, :])
                 temp[:tar.shape[0], :tar.shape[1], :] = tar
                 tiles[-1].append(temp)
             elif y + 64 < width:
-                temp = np.ones((64, 64, 3))
-                tar = np.copy(image[x:x, y:y + 64, :])
+                temp = np.ones((64, 64, 3))*255
+                tar = np.copy(image[x:, y:y + 64, :])
                 temp[:tar.shape[0], :tar.shape[1], :] = tar
                 tiles[-1].append(temp)
             elif x + 64 >= length and y + 64 >= width:
-                temp = np.ones((64, 64, 3))
+                temp = np.ones((64, 64, 3))*255
                 tar = np.copy(image[x:, y:, :])
                 temp[:tar.shape[0], :tar.shape[1], :] = tar
                 tiles[-1].append(temp)
@@ -54,11 +54,9 @@ class Api:
                 dataurl = 'data:image/png;base64,' + b64encode(image_io.getvalue()).decode('ascii')
                 tile_row.append(dataurl)
             new_tiles.append(tile_row)
-
-        # pylab.imshow(image)
-        # pylab.show()
-        # print(result[0])
-        return str(tiles)
+        # print(str(new_tiles[0][0]))
+        # return str(new_tiles[0][0])
+        return json.dumps(new_tiles)
     def removeItem(self, item):
         print('Removed item %s' % item)
 
@@ -77,5 +75,5 @@ class Api:
 
 if __name__ == '__main__':
     api = Api()
-    webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/new_index.html', js_api=api, min_size=(600, 450))
-    webview.start()
+    webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/new_index.html', js_api=api, min_size=(600, 500))
+    webview.start(gui='qt')

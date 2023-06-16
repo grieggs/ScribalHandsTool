@@ -60,21 +60,117 @@ def eval_image(tiles, template, model):
             preds[i, j] = torch.nn.functional.cosine_similarity(pred, template, dim=-1)
     return preds
 
+def build_template(directory, model):
+    checkpoint = torch.load(model, map_location=torch.device('cpu'))
+    training_outs = checkpoint['state_dict']['metric_fc.weight'].shape[0]
+    torch.set_grad_enabled(False)
+    model = ScribalHandClassifier(num_classes=training_outs).cpu()
+    model.load_state_dict(checkpoint['state_dict'])
+    model.eval()
+    model = model.cpu()
+
+    author = glob.glob(directory+'/*')
+    template = {}
+    for path in author:
+        tag = path.split('/')[-1]
+        iw = Image.open(path)
+        image = np.asarray(iw) / 255
+        length, width, c = image.shape
+        tiles = []
+        for x in range(0, length, 64):
+            tiles.append([])
+            for y in range(0, width, 64):
+                if x + 64 < length and y + 64 < width:
+                    tiles[-1].append(np.copy(image[x:x + 64, y:y + 64, :]))
+                elif x + 64 < length:
+                    temp = np.ones((64, 64, 3))
+                    tar = np.copy(image[x:x + 64, y:y, :])
+                    temp[:tar.shape[0], :tar.shape[1], :] = tar
+                    tiles[-1].append(temp)
+                elif y + 64 < width:
+                    temp = np.ones((64, 64, 3))
+                    tar = np.copy(image[x:x, y:y + 64, :])
+                    temp[:tar.shape[0], :tar.shape[1], :] = tar
+                    tiles[-1].append(temp)
+                elif x + 64 >= length and y + 64 >= width:
+                    temp = np.ones((64, 64, 3))
+                    tar = np.copy(image[x:, y:, :])
+                    temp[:tar.shape[0], :tar.shape[1], :] = tar
+                    tiles[-1].append(temp)
+
+    # Testing thing here
+
+    # ret, thresh = cv2.threshold((np.mean(np.array(image), axis=-1) * 255).astype(np.uint8), 0, 1, cv2.THRESH_OTSU)
+    #
+    # predz = np.zeros((len(tiles), len(tiles[0])))
+    # for i, x in enumerate(tiles):
+    #     for j, y in enumerate(x):
+    #         imgray = np.mean(np.array(y), axis=-1) * 255
+    #         thresh = imgray < ret
+    #         # pylab.imshow(imgray)
+    #         # pylab.show()
+    #         # print(imgray.min())
+    #         # print(sum(sum(thresh != 1)))
+    #         # print("------")
+    #         #
+    #         # pylab.imshow(thresh)
+    #         # pylab.show()
+    #         if sum(sum(thresh)) < 100:
+    #             predz[i, j] = 0
+    #         else:
+    #             predz[i, j] = 1
+
+    # preds = np.zeros((len(tiles), len(tiles[0]), 512))
+    preds = []
+    for i, x in enumerate(tiles):
+        for j, y in enumerate(x):
+            # if predz[i, j] == 1:
+            input = torch.tensor(y)
+            input = input.permute(2, 0, 1).float()
+            input = input.unsqueeze(0)
+            pred, junk = model(input, torch.stack([torch.nn.functional.one_hot(torch.tensor(0), 837)]))
+            junk = torch.argmax(junk)
+            if junk != 0:
+                preds.append(np.asarray(pred))
+            else:
+                print('interesting')
+    preds = np.stack(preds, axis=0)
+    template[tag] = preds
+    return template
 
 
 class SplashApi:
     def __init__(self):
         self.templates = {}
+        self.models = {}
     def getTemplates(self):
-        templates = glob.glob('templates/*.npy')
+        templates = glob.glob(os.path.join('templates','*.npy'))
+        self.templates = {}
         for x in templates:
             self.templates[os.path.basename(x)] = x
+        # print(list(self.templates.keys()))
         return json.dumps(list(self.templates.keys()))
 
+    # def getModels(self):
+    #     templates = glob.glob('models/*.npy')
+    #     for x in templates:
+    #         self.templates[os.path.basename(x)] = x
+    #     return json.dumps(list(self.templates.keys()))
+    def buildTemplate(self):
+        # result = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
+        # template = build_template(result[0], "models/shm.ckpt")
+        # default_save = result[0].split(os.sep)[-1] +'.npy'
+        # template = build_template(result[0], os.path.join("models","shm.ckpt"))
+        # output = webview.windows[0].create_file_dialog(webview.SAVE_DIALOG,save_filename = default_save,directory=os.path.join(os.getcwd(),'templates'), file_types=('Template Files (*.npy)', 'All files (*.*)'))
+        # np.save(output[0], template)
+        return True
+
+
     def openImageViewer(self, template):
-        api = Api("models/shm.ckpt", self.templates[template])
-        webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/docpage.html', js_api=api,
+        api = Api(os.path.join("models","shm.ckpt"), self.templates[template])
+        window = webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/docpage.html', js_api=api,
                               min_size=(600, 500))
+        api.setWindow(window)
 
 
 class Api:
@@ -92,12 +188,16 @@ class Api:
         self.template = np.load(template_path,allow_pickle=True).item()
         self.tiles = None
         self.loaded_image = None
+        self.window = None
+
+    def setWindow(self, window):
+        self.window = window
 
     def addItem(self, title):
         print('Added item %s' % title)
     def loadImage(self):
         file_types = ('Image Files (*.bmp;*.jpg;*.gif)', 'All files (*.*)')
-        result = webview.windows[0].create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=file_types)
+        result = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=file_types)
         img = Image.open(result[0]).convert('RGB')
         self.loaded_image = result[0]
         self.tiles = get_tiles(img)

@@ -157,12 +157,12 @@ class SplashApi:
     #         self.templates[os.path.basename(x)] = x
     #     return json.dumps(list(self.templates.keys()))
     def buildTemplate(self):
-        # result = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
-        # template = build_template(result[0], "models/shm.ckpt")
-        # default_save = result[0].split(os.sep)[-1] +'.npy'
-        # template = build_template(result[0], os.path.join("models","shm.ckpt"))
-        # output = webview.windows[0].create_file_dialog(webview.SAVE_DIALOG,save_filename = default_save,directory=os.path.join(os.getcwd(),'templates'), file_types=('Template Files (*.npy)', 'All files (*.*)'))
-        # np.save(output[0], template)
+        result = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
+        template = build_template(result[0], "models/shm.ckpt")
+        default_save = result[0].split(os.sep)[-1] +'.npy'
+        template = build_template(result[0], os.path.join("models","shm.ckpt"))
+        output = webview.windows[0].create_file_dialog(webview.SAVE_DIALOG,save_filename = default_save,directory=os.path.join(os.getcwd(),'templates'), file_types=('Template Files (*.npy)', 'All files (*.*)'))
+        np.save(output[0], template)
         return True
 
 

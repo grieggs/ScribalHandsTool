@@ -182,6 +182,75 @@ class ArcResnet18(pl.LightningModule):
 
 
 
+
+class ArcResnet50(pl.LightningModule):
+    def __init__(self,num_classes=657):
+        super().__init__()
+        self.model = resnet50(weights='DEFAULT')
+        self.model.fc = nn.Linear(2048,512)
+        self.metric_fc = ArcMarginProduct(512, num_classes, s=30, m=0.5, easy_margin=False)
+
+    def forward(self,x, label = None):
+        feature = self.model(x)
+        if label is not None:
+            metric = self.metric_fc(feature,label)
+            return feature,metric
+        else:
+            return feature, None
+
+
+    # def load_for_inference(self, checkpoint_path):
+
+    def training_step(self, batch, batch_idx):
+        # training_step defines the train loop.
+        images, target = batch
+        feature,metric = self(images,target)
+
+        loss_train = F.cross_entropy(metric, target)
+        acc1, acc5 = self.__accuracy(metric, target, topk=(1, 5))
+        self.log("train_loss", loss_train, on_step=True, on_epoch=True, logger=True)
+        self.log("train_acc1", acc1, on_step=True, prog_bar=True, on_epoch=True, logger=True)
+        self.log("train_acc5", acc5, on_step=True, on_epoch=True, logger=True)
+        return loss_train
+
+
+    def eval_step(self, batch, batch_idx, prefix: str):
+        images, target = batch
+        feature, metric = self(images, target)
+        loss_val = F.cross_entropy(metric, target)
+        acc1, acc5 = self.__accuracy(metric, target, topk=(1, 5))
+        self.log(f"{prefix}_loss", loss_val, on_step=True, on_epoch=True)
+        self.log(f"{prefix}_acc1", acc1, on_step=True, prog_bar=True, on_epoch=True)
+        self.log(f"{prefix}_acc5", acc5, on_step=True, on_epoch=True)
+
+    def validation_step(self, batch, batch_idx):
+        return self.eval_step(batch, batch_idx, "val")
+
+    @staticmethod
+    def __accuracy(output, target, topk=(1,)):
+        """Computes the accuracy over the k top predictions for the specified values of k."""
+        with torch.no_grad():
+            target = torch.argmax(target,dim=1)
+
+            maxk = max(topk)
+            batch_size = target.size(0)
+
+            _, pred = output.topk(maxk, 1, True, True)
+            pred = pred.t()
+            correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+            res = []
+            for k in topk:
+                correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
+                res.append(correct_k.mul_(100.0 / batch_size))
+            return res
+
+
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam([{'params': self.model.parameters()}, {'params': self.metric_fc.parameters()}], lr=1e-3, weight_decay=1e-5)
+        return optimizer
+
 class SHResnet50(pl.LightningModule):
     def __init__(self):
         super().__init__()

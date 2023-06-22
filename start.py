@@ -9,6 +9,7 @@ import json
 import torch
 import numpy as np
 import glob
+import cv2
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -100,40 +101,40 @@ def build_template(directory, model):
 
     # Testing thing here
 
-    # ret, thresh = cv2.threshold((np.mean(np.array(image), axis=-1) * 255).astype(np.uint8), 0, 1, cv2.THRESH_OTSU)
-    #
-    # predz = np.zeros((len(tiles), len(tiles[0])))
-    # for i, x in enumerate(tiles):
-    #     for j, y in enumerate(x):
-    #         imgray = np.mean(np.array(y), axis=-1) * 255
-    #         thresh = imgray < ret
-    #         # pylab.imshow(imgray)
-    #         # pylab.show()
-    #         # print(imgray.min())
-    #         # print(sum(sum(thresh != 1)))
-    #         # print("------")
-    #         #
-    #         # pylab.imshow(thresh)
-    #         # pylab.show()
-    #         if sum(sum(thresh)) < 100:
-    #             predz[i, j] = 0
-    #         else:
-    #             predz[i, j] = 1
+    ret, thresh = cv2.threshold((np.mean(np.array(image), axis=-1) * 255).astype(np.uint8), 0, 1, cv2.THRESH_OTSU)
+
+    predz = np.zeros((len(tiles), len(tiles[0])))
+    for i, x in enumerate(tiles):
+        for j, y in enumerate(x):
+            imgray = np.mean(np.array(y), axis=-1) * 255
+            thresh = imgray < ret
+            # pylab.imshow(imgray)
+            # pylab.show()
+            # print(imgray.min())
+            # print(sum(sum(thresh != 1)))
+            # print("------")
+            #
+            # pylab.imshow(thresh)
+            # pylab.show()
+            if sum(sum(thresh)) < 100:
+                predz[i, j] = 0
+            else:
+                predz[i, j] = 1
 
     # preds = np.zeros((len(tiles), len(tiles[0]), 512))
     preds = []
     for i, x in enumerate(tiles):
         for j, y in enumerate(x):
-            # if predz[i, j] == 1:
-            input = torch.tensor(y)
-            input = input.permute(2, 0, 1).float()
-            input = input.unsqueeze(0)
-            pred, junk = model(input, torch.stack([torch.nn.functional.one_hot(torch.tensor(0), 837)]))
-            junk = torch.argmax(junk)
-            if junk != 0:
-                preds.append(np.asarray(pred))
-            else:
-                print('interesting')
+            if predz[i, j] == 1:
+                input = torch.tensor(y)
+                input = input.permute(2, 0, 1).float()
+                input = input.unsqueeze(0)
+                pred, junk = model(input, torch.stack([torch.nn.functional.one_hot(torch.tensor(0), 837)]))
+                junk = torch.argmax(junk)
+                if junk != 0:
+                    preds.append(np.asarray(pred))
+            # else:
+            #     print('interesting')
     preds = np.stack(preds, axis=0)
     template[tag] = preds
     return template

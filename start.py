@@ -169,6 +169,7 @@ class SplashApi:
         # print(list(self.templates.keys()))
         return json.dumps(list(self.templates.keys()))
 
+
     # def getModels(self):
     #     templates = glob.glob('models/*.npy')
     #     for x in templates:
@@ -198,6 +199,7 @@ class Api:
         self.template_path = template_path
         torch.set_grad_enabled(False)
         self.model = load_model(chk_path)
+        self.template_path = template_path
         self.template = np.load(template_path,allow_pickle=True).item()
         self.tiles = None
         self.loaded_image = None
@@ -206,11 +208,21 @@ class Api:
     def setWindow(self, window):
         self.window = window
 
+    def getTemplatePath(self):
+        return os.path.basename(self.template_path)
+
+    def changeTemplate(self):
+        file_types = ('Template Files (*.npy)', 'All files (*.*)')
+        result = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False, file_types=file_types)
+        self.template = np.load(result[0],allow_pickle=True).item()
+        self.template_path=result[0]
+        return os.path.basename(result[0])
+
     def addItem(self, title):
         print('Added item %s' % title)
     def loadImage(self):
-        file_types = ('Image Files (*.bmp;*.jpg;*.gif)', 'All files (*.*)')
-        result = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=file_types)
+        file_types = ('Image Files (*.bmp;*.jpg;*.gif;*.png)', 'All files (*.*)')
+        result = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False, file_types=file_types)
         img = Image.open(result[0]).convert('RGB')
         self.loaded_image = result[0]
         self.tiles = get_tiles(img)
@@ -251,9 +263,6 @@ class Api:
 
     def toggleFullscreen(self):
         webview.windows[0].toggle_fullscreen()
-
-    def test(self):
-        print("test")
 
 class Manager:
     def __init__(self):

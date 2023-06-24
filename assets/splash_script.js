@@ -56,7 +56,6 @@ function buildTemplate(){
             select.remove(i);
         }
     }
-    console.log("good")
     myPromise = window.pywebview.api.getTemplates();
     myPromise.then(
         function(value) {

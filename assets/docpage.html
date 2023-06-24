@@ -19,7 +19,11 @@
             </tr>
             <tr>
                 <td>Template:</td>
-                <td><div id="template">Hoccleve.npy</div></td>
+                <td><div id="template"></div></td>
+            </tr>
+            <tr>
+                <td>Overall Score:</td>
+                <td><div id="total"></div></td>
             </tr>
         </table>
     </div>
@@ -28,9 +32,9 @@
         <button onclick = "loadImage()" type="button">Load Image</button>
         <button onclick = "evalImage()" type="button">Evaluate Image</button>
         <button onclick = "toggleColors()" type="button">Toggle Colors</button>
-        <button onclick = "loadTemplate()" type="button">Change Template</button>
+        <button onclick = "changeTemplate()" type="button">Change Template</button>
         Zoom
-        <input type="range" min="1" max="1000" value="100" class="slider" id="zoomBar" onchange="zoomBar()">
+        <input type="range" min="1" max="200" value="100" class="slider" id="zoomBar" onchange="zoomBar()">
 
     </div>
 

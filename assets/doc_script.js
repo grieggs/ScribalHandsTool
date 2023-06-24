@@ -8,7 +8,22 @@ let img_opacity = 1;
 let raw_width = -1;
 let raw_height = -1;
 let frozen = false;
-let zoom = 1
+let zoom = 1;
+let avg_score = -1;
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function () {
+        myPromise = window.pywebview.api.getTemplatePath();
+        myPromise.then(
+            function (value) {
+                document.getElementById('template').innerHTML = value;
+            },
+            function (error) {
+            });
+    }, 100);
+});
+
+
 
 // window.addEventListener('load', function() {
 //     resizeCanvas()
@@ -27,16 +42,8 @@ let zoom = 1
 
 function move_all_to_back(group){
     var objs = group.getObjects();
-    for (let j = 0, len =  color_group.size(); j < len; j++) {
-        try
-        {
+    for (let j = 0, len =  group.size(); j < len; j++) {
             canvas.sendToBack(objs[j]);
-        }
-        catch(e)
-        {
-            continue;
-        }
-
     }
 }
 
@@ -44,7 +51,6 @@ function move_all_to_back(group){
 fabric.Object.prototype.transparentCorners = false;
 canvas.on('mouse:over', function(e) {
   if(e.target && !Frozen) {
-      console.error(image_group.length)
       var focus_img = document.getElementById('focus');
       e.target.set('opacity',1)
       focus_img.src = e.target.toDataURL();
@@ -73,6 +79,18 @@ canvas.on('mouse:out', function(e) {
 
 function loadImage() {
     // var canvas = document.getElementById("c").fabric;
+    canvas.clear()
+    image_group = new fabric.Group([]);
+    color_group = new fabric.Group([]);
+    img_array = [];
+    color_array = [];
+    img_opacity = 1;
+    raw_width = -1;
+    raw_height = -1;
+    frozen = false;
+    zoom = 1
+
+
     Frozen = true;
     myPromise = window.pywebview.api.loadImage()
     myPromise.then(
@@ -116,12 +134,16 @@ function evalImage(){
         function(value) {
             color_array = []
             value = JSON.parse(value);
+            var total = 0;
+            var div = 0;
             for (let i = 0, len = value.length; i < len; i++) {
                 color_array.push([])
                 for (let j = 0, len = value[i].length; j < len; j++) {
+                    total+=value[i][j];
+                    div+=1;
                     img_array[i][j].score = value[i][j].toFixed(5)
                     img_array[i][j].set('opacity', img_opacity);
-                    if(value[i][j] > .98){
+                    if(value[i][j] > .95){
                         var rect = new fabric.Rect({
                           left: j*64,
                           top: i*64,
@@ -129,7 +151,7 @@ function evalImage(){
                           width: 64,
                           height: 64
                         });
-                    }else if (value[i][j] > .93) {
+                    }else if (value[i][j] > 0.875) {
                         var rect = new fabric.Rect({
                           left: j*64,
                           top: i*64,
@@ -152,6 +174,8 @@ function evalImage(){
                     color_group.add(rect)
                 }
             }
+            avg_score = (total/div).toFixed(5)
+            document.getElementById('total').innerHTML = avg_score;
             Frozen = false;
         },
         function(error) {Frozen = false;}
@@ -185,12 +209,29 @@ function zoomBar(){
         canvas.setWidth(raw_width * canvas.getZoom());
         canvas.setHeight(raw_height * canvas.getZoom());
     }
-
-
 }
 
-function loadTemplate() {
-
+function changeTemplate() {
+    Frozen = true;
+    myPromise = window.pywebview.api.changeTemplate()
+    myPromise.then(
+        function(value) {
+            document.getElementById('total').innerHTML = '';
+            document.getElementById('template').innerHTML = value;
+            document.getElementById('total').innerHTML = '';
+            var objs = color_group.getObjects();
+            for (let j = 0, len =  color_group.size(); j < len; j++) {
+                canvas.remove(objs[j]);
+            }
+            var objs = color_group.getObjects();
+            for (let j = 0, len =  image_group.size(); j < len; j++) {
+                objs[j].score = 'n/a';
+            }
+            color_group = new fabric.Group([]);
+            Frozen = false;
+        },
+        function(error) {Frozen = false;}
+        );
 }
 
 

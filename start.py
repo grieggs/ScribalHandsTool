@@ -2,7 +2,8 @@ import os
 
 import webview
 from PIL import Image
-from models.models import ArcResnet18 as ScribalHandClassifier
+from models.models import ArcResnet18 as ScribalHandClassifier18
+from models.models import ArcResnet50 as ScribalHandClassifier50
 from io import BytesIO
 from base64 import b64encode
 import json
@@ -23,6 +24,29 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
+
+
+
+def load_model(model):
+    if torch.cuda.is_available():
+        checkpoint = torch.load(model)
+    else:
+        checkpoint = torch.load(model, map_location=torch.device('cpu'))
+    training_outs = checkpoint['state_dict']['metric_fc.weight'].shape[0]
+    torch.set_grad_enabled(False)
+    try:
+        model = ScribalHandClassifier18(num_classes=training_outs)
+        model.load_state_dict(checkpoint['state_dict'])
+        model.eval()
+    except RuntimeError:
+        model = ScribalHandClassifier50(num_classes=training_outs)
+        model.load_state_dict(checkpoint['state_dict'])
+        model.eval()
+    if torch.cuda.is_available():
+        model = model.cuda()
+    else:
+        model = model.cpu()
+    return model
 
 def get_tiles(iw):
     image = np.asarray(iw)
@@ -62,19 +86,12 @@ def eval_image(tiles, template, model):
     return preds
 
 def build_template(directory, model):
-    checkpoint = torch.load(model, map_location=torch.device('cpu'))
-    training_outs = checkpoint['state_dict']['metric_fc.weight'].shape[0]
-    torch.set_grad_enabled(False)
-    model = ScribalHandClassifier(num_classes=training_outs).cpu()
-    model.load_state_dict(checkpoint['state_dict'])
-    model.eval()
-    model = model.cpu()
-
+    model = load_model(model)
     author = glob.glob(directory+'/*')
     template = {}
     for path in author:
         tag = path.split('/')[-1]
-        iw = Image.open(path)
+        iw = Image.open(path).convert('RGB')
         image = np.asarray(iw) / 255
         length, width, c = image.shape
         tiles = []
@@ -169,7 +186,7 @@ class SplashApi:
 
     def openImageViewer(self, template):
         api = Api(os.path.join("models","shm.ckpt"), self.templates[template])
-        window = webview.create_window('The Paleographer\'s Eye From the Machine', 'assets/docpage.html', js_api=api,
+        window = webview.create_window('The Paleographer\'s Eye ex machina', 'assets/docpage.html', js_api=api,
                               min_size=(600, 500))
         api.setWindow(window)
 
@@ -179,13 +196,8 @@ class Api:
         self.done = False
         self.chk_path = chk_path
         self.template_path = template_path
-        checkpoint = torch.load(chk_path, map_location=torch.device('cpu'))
-        training_outs = checkpoint['state_dict']['metric_fc.weight'].shape[0]
         torch.set_grad_enabled(False)
-        self.model = ScribalHandClassifier(num_classes=training_outs).cpu()
-        self.model.load_state_dict(checkpoint['state_dict'])
-        self.model.eval()
-        self.model = self.model.cpu()
+        self.model = load_model(chk_path)
         self.template = np.load(template_path,allow_pickle=True).item()
         self.tiles = None
         self.loaded_image = None

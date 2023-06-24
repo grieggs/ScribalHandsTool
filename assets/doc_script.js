@@ -28,7 +28,15 @@ let zoom = 1
 function move_all_to_back(group){
     var objs = group.getObjects();
     for (let j = 0, len =  color_group.size(); j < len; j++) {
-        canvas.sendToBack(objs[j]);
+        try
+        {
+            canvas.sendToBack(objs[j]);
+        }
+        catch(e)
+        {
+            continue;
+        }
+
     }
 }
 
